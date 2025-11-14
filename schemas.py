@@ -1,48 +1,60 @@
 """
 Database Schemas
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
-
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Car Rental App Schemas using Pydantic models.
+Each Pydantic model maps to a MongoDB collection using the lowercase class name.
+- Car -> "car"
+- Rental -> "rental"
+- Invoice -> "invoice"
 """
 
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
+from datetime import datetime
 
-# Example schemas (replace with your own):
-
-class User(BaseModel):
+class Car(BaseModel):
     """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
+    Cars available for rent
+    Collection: "car"
     """
-    name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+    make: str = Field(..., description="Manufacturer, e.g., Toyota")
+    model: str = Field(..., description="Model, e.g., Corolla")
+    year: int = Field(..., ge=1900, le=2100, description="Year of manufacture")
+    plate_number: str = Field(..., description="Unique registration number")
+    daily_rate: float = Field(..., ge=0, description="Daily rental rate")
+    available: bool = Field(True, description="Whether the car is available for rent")
 
-class Product(BaseModel):
+class Rental(BaseModel):
     """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
+    Rental records for each car
+    Collection: "rental"
     """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
+    car_id: str = Field(..., description="ID of the rented car")
+    customer_name: str = Field(..., description="Customer full name")
+    start_date: datetime = Field(default_factory=datetime.utcnow, description="Rental start time (UTC)")
+    end_date: Optional[datetime] = Field(None, description="Rental end time (UTC)")
+    status: str = Field("active", description="active | returned")
 
-# Add your own schemas here:
-# --------------------------------------------------
+class InvoiceItem(BaseModel):
+    description: str
+    quantity: int = 1
+    unit_price: float
+    amount: float
 
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+class Invoice(BaseModel):
+    """
+    Invoices generated upon return
+    Collection: "invoice"
+    """
+    rental_id: str
+    car_id: str
+    customer_name: str
+    start_date: datetime
+    end_date: datetime
+    days: int
+    daily_rate: float
+    subtotal: float
+    tax_rate: float = 0.0
+    tax_amount: float = 0.0
+    total: float
+    items: Optional[List[InvoiceItem]] = None
